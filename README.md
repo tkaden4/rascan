@@ -2,7 +2,7 @@
 
 A simple port scanner written in Rust.
 
-# Usage
+### Usage
 ```
     rascan [FLAGS] [OPTIONS] <HOST>
 
