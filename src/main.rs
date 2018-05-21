@@ -1,79 +1,14 @@
 #[macro_use]
 extern crate clap;
+extern crate pnet;
 
 use std::net::*;
 use std::time::Duration;
 
-enum PortStatus {
-    Open,
-    Closed
-}
+mod ports;
+mod util;
 
-impl PortStatus {
-    fn is_open(&self) -> bool {
-        match self {
-            &PortStatus::Open => true,
-            &PortStatus::Closed => false,
-        }
-    }
-
-    fn is_closed(&self) -> bool {
-        !self.is_open()
-    }
-}
-
-fn scan_tcp(addr: &SocketAddr, timeout: Duration) -> PortStatus
-{
-    match TcpStream::connect_timeout(addr, timeout) {
-        Ok(stream) => {
-            stream.shutdown(Shutdown::Both).unwrap();
-            PortStatus::Open
-        },
-        Err(_) => PortStatus::Closed
-    }
-}
-
-struct Ports {
-    current: u16,
-    max: u16,
-    host: IpAddr,
-    timeout: Duration,
-    done: bool
-}
-
-impl Ports {
-    fn new(from: u16, to: u16, host: IpAddr, timeout: Duration) -> Self {
-        Ports {
-            current: from,
-            max: to,
-            host: host,
-            timeout: timeout,
-            done: false
-        }
-    }
-}
-
-impl Iterator for Ports {
-    type Item = (u16, PortStatus);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
-            return None;
-        }
-        if self.current == self.max {
-            self.done = true;
-        }
-        let res = (self.host, self.current).to_socket_addrs().ok()
-            .and_then(|mut x| x.nth(0))
-            .map(|x| (self.current, scan_tcp(&x, self.timeout)));
-        self.current += 1;
-        res
-    }
-}
-
-fn open_ports(host: IpAddr, timeout: Duration) -> Ports {
-    Ports::new(0, 1024, host, timeout)
-}
+use ports::*;
 
 fn print_status(port: u16, status: &PortStatus) {
     let status = match status {
@@ -98,23 +33,31 @@ fn main() {
         (@arg HOST: +required "Host to scan")
         (@arg timeout: -t --timeout +takes_value "Set port timeout (in ms)")
         (@arg only_open: -o --open "Only show open ports")
+        (@arg start: -s --start +takes_value "Start port")
+        (@arg end: -e --end +takes_value "End port")
     ).get_matches();
 
-    let host = args.value_of("HOST")
-        .expect("needed host argument");
+    let start_port = args.value_of("start")
+        .and_then(|x| x.parse::<u16>().ok())
+        .unwrap_or(0);
 
-    let timeout = args.value_of("timeout")
+    let end_port = args.value_of("end")
+        .and_then(|x| x.parse::<u16>().ok())
+        .unwrap_or(if args.is_present("start") { start_port } else { 1024 });
+    
+    let timeout_ms = args.value_of("timeout")
         .and_then(|t| t.parse::<u64>().ok())
         .unwrap_or(500);
-    let timeout = Duration::from_millis(timeout);
+    let timeout = Duration::from_millis(timeout_ms);
 
     let only_open = args.is_present("only_open");
 
+    let host = args.value_of("HOST")
+        .expect("needed host argument");
     let host_addr = resolve_host(host)
         .expect("unable to resolve host");
 
-
-    open_ports(host_addr, timeout)
+    ports(host_addr, timeout, start_port, end_port)
         .filter(|&(_, ref status)|{
             if only_open {
                 status.is_open()
