@@ -15,8 +15,8 @@ mod ports;
 
 use ports::*;
 
-fn paint(text: &str, color: Colour) -> String {
-    if isatty(1).unwrap() {
+fn paint_tty(text: &str, color: Colour) -> String {
+    if isatty(1).expect("impossible") {
         color.paint(text).to_string()
     } else {
         text.into()
@@ -25,15 +25,14 @@ fn paint(text: &str, color: Colour) -> String {
 
 fn print_status(port: u16, status: &PortStatus) {
     let status = match status {
-        &PortStatus::Closed => paint("CLOSED", Colour::Red),
-        &PortStatus::Open => paint("OPEN", Colour::Green)
+        &PortStatus::Closed => paint_tty("CLOSED", Colour::Red),
+        &PortStatus::Open => paint_tty("OPEN", Colour::Green)
     };
-    println!("{:<6} | {}", port, status);
+    println!("{:<5} {}", port, status);
 }
 
 fn resolve_host(host: &str) -> Option<IpAddr> {
-    (host, 0).to_socket_addrs()
-        .ok()
+    (host, 0).to_socket_addrs().ok()
         .map(|x| x.map(|addr| addr.ip()))
         .and_then(|mut x| x.nth(0))
 }

@@ -64,7 +64,9 @@ impl Iterator for Ports {
             .and_then(|mut x| x.nth(0))
             .and_then(|x| scan_tcp(&x, self.timeout)
                       .map(|stat| (self.current, stat)));
-        self.current += 1;
+        if !self.done {
+            self.current += 1;
+        }
         res
     }
 }
