@@ -1,17 +1,32 @@
 #[macro_use]
 extern crate clap;
 extern crate pnet;
+extern crate nix;
+extern crate ansi_term;
 
 use std::net::*;
 use std::time::Duration;
 
+use nix::unistd::isatty;
+
+use ansi_term::*;
+
 mod ports;
+
 use ports::*;
+
+fn paint(text: &str, color: Colour) -> String {
+    if isatty(1).unwrap() {
+        color.paint(text).to_string()
+    } else {
+        text.into()
+    }
+}
 
 fn print_status(port: u16, status: &PortStatus) {
     let status = match status {
-        &PortStatus::Closed => "CLOSED",
-        &PortStatus::Open => "OPEN",
+        &PortStatus::Closed => paint("CLOSED", Colour::Red),
+        &PortStatus::Open => paint("OPEN", Colour::Green)
     };
     println!("{:<6} | {}", port, status);
 }

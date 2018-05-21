@@ -6,3 +6,5 @@ authors = ["tkaden4 <thomas.kaden4@outlook.com>"]
 [dependencies]
 clap="2.31"
 pnet="0.21.0"
+nix="*"
+ansi_term="*"
