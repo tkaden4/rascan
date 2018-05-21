@@ -94,7 +94,7 @@ fn main() {
     let args = clap_app!(rascan =>
         (version: "0.1")
         (author: "Kaden Thomas")
-        (about: "Scan TCP/UDP ports")
+        (about: "Scan TCP ports")
         (@arg HOST: +required "Host to scan")
         (@arg timeout: -t --timeout +takes_value "Set port timeout (in ms)")
         (@arg only_open: -o --open "Only show open ports")
@@ -110,7 +110,10 @@ fn main() {
 
     let only_open = args.is_present("only_open");
 
-    open_ports(resolve_host(host).unwrap(), timeout)
+    let host_addr = resolve_host(host)
+        .expect("unable to resolve host");
+
+    open_ports(host_addr, timeout)
         .filter(|&(_, ref status)|{
             if only_open {
                 status.is_open()
