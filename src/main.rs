@@ -6,8 +6,6 @@ use std::net::*;
 use std::time::Duration;
 
 mod ports;
-mod util;
-
 use ports::*;
 
 fn print_status(port: u16, status: &PortStatus) {

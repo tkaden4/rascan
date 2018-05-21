@@ -12,6 +12,8 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
+    -e, --end <end>            End port
+    -s, --start <start>        Start port
     -t, --timeout <timeout>    Set port timeout (in ms)
 
 ARGS:
