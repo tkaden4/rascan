@@ -2,7 +2,7 @@
 extern crate clap;
 
 use std::net::*;
-use std::time::{Duration};
+use std::time::Duration;
 
 enum PortStatus {
     Open,
@@ -75,12 +75,12 @@ fn open_ports(host: IpAddr, timeout: Duration) -> Ports {
     Ports::new(0, 1024, host, timeout)
 }
 
-fn print_status(host: &str, port: u16, status: &PortStatus) {
+fn print_status(port: u16, status: &PortStatus) {
     let status = match status {
         &PortStatus::Closed => "CLOSED",
         &PortStatus::Open => "OPEN",
     };
-    println!("{}:{:<6} | {}", host, port, status);
+    println!("{:<6} | {}", port, status);
 }
 
 fn resolve_host(host: &str) -> Option<IpAddr> {
@@ -113,6 +113,7 @@ fn main() {
     let host_addr = resolve_host(host)
         .expect("unable to resolve host");
 
+
     open_ports(host_addr, timeout)
         .filter(|&(_, ref status)|{
             if only_open {
@@ -122,6 +123,6 @@ fn main() {
             }
         })
         .for_each(|(port, status)|{
-            print_status(host, port, &status);
+            print_status(port, &status);
         });
 }
