@@ -1,0 +1,8 @@
+[package]
+name = "rascan"
+version = "0.1.0"
+authors = ["tkaden4 <thomas.kaden4@outlook.com>"]
+
+[dependencies]
+clap="2.31"
+futures="0.2.1"
