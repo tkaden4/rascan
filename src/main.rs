@@ -1,8 +1,5 @@
 #[macro_use]
 extern crate clap;
-extern crate futures;
-
-use futures::Future;
 
 use std::net::*;
 use std::time::{Duration};
@@ -25,7 +22,7 @@ impl PortStatus {
     }
 }
 
-fn test_port(addr: &SocketAddr, timeout: Duration) -> PortStatus
+fn scan_tcp(addr: &SocketAddr, timeout: Duration) -> PortStatus
 {
     match TcpStream::connect_timeout(addr, timeout) {
         Ok(stream) => {
@@ -36,12 +33,61 @@ fn test_port(addr: &SocketAddr, timeout: Duration) -> PortStatus
     }
 }
 
+struct Ports {
+    current: u16,
+    max: u16,
+    host: IpAddr,
+    timeout: Duration,
+    done: bool
+}
+
+impl Ports {
+    fn new(from: u16, to: u16, host: IpAddr, timeout: Duration) -> Self {
+        Ports {
+            current: from,
+            max: to,
+            host: host,
+            timeout: timeout,
+            done: false
+        }
+    }
+}
+
+impl Iterator for Ports {
+    type Item = (u16, PortStatus);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        if self.current == self.max {
+            self.done = true;
+        }
+        let res = (self.host, self.current).to_socket_addrs().ok()
+            .and_then(|mut x| x.nth(0))
+            .map(|x| (self.current, scan_tcp(&x, self.timeout)));
+        self.current += 1;
+        res
+    }
+}
+
+fn open_ports(host: IpAddr, timeout: Duration) -> Ports {
+    Ports::new(0, 1024, host, timeout)
+}
+
 fn print_status(host: &str, port: u16, status: &PortStatus) {
     let status = match status {
         &PortStatus::Closed => "CLOSED",
         &PortStatus::Open => "OPEN",
     };
     println!("{}:{:<6} | {}", host, port, status);
+}
+
+fn resolve_host(host: &str) -> Option<IpAddr> {
+    (host, 0).to_socket_addrs()
+        .ok()
+        .map(|x| x.map(|addr| addr.ip()))
+        .and_then(|mut x| x.nth(0))
 }
 
 fn main() {
@@ -55,27 +101,24 @@ fn main() {
     ).get_matches();
 
     let host = args.value_of("HOST")
-        .expect("needed host argument"); 
+        .expect("needed host argument");
 
     let timeout = args.value_of("timeout")
         .and_then(|t| t.parse::<u64>().ok())
         .unwrap_or(500);
-
     let timeout = Duration::from_millis(timeout);
 
     let only_open = args.is_present("only_open");
 
-    for port in 0u16..1024 {
-        let addrs: Vec<_> = (host, port).to_socket_addrs()
-            .expect("unable to form host address")
-            .collect();
-        let addr = addrs.get(0)
-            .expect("no valid host addresses");
-        let status = test_port(&addr, timeout);
-        if status.is_closed() && only_open {
-            continue;
-        } else {
+    open_ports(resolve_host(host).unwrap(), timeout)
+        .filter(|&(_, ref status)|{
+            if only_open {
+                status.is_open()
+            } else {
+                true
+            }
+        })
+        .for_each(|(port, status)|{
             print_status(host, port, &status);
-        }
-    }
+        });
 }
