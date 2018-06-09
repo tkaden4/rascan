@@ -1,6 +1,8 @@
 use std::net::*;
 use std::time::Duration;
 
+use rayon::prelude::*;
+
 pub enum PortStatus {
     Open,
     Closed
@@ -36,8 +38,8 @@ fn get_addr(host: IpAddr, port: u16) -> SocketAddr {
         .unwrap()
 }
 
-pub fn ports(host: IpAddr, timeout: Duration, start: u16, end: u16) -> impl Iterator<Item = (u16, PortStatus)> {
-    //Ports::new(start, end, host, timeout)
+pub fn ports(host: IpAddr, timeout: Duration, start: u16, end: u16) -> impl ParallelIterator<Item = (u16, PortStatus)> {
     (start..end)
+        .into_par_iter()
         .map(move |x| (x, scan_tcp(&get_addr(host, x), timeout)))
 }

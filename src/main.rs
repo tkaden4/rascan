@@ -1,8 +1,10 @@
 #[macro_use] extern crate clap;
-#[macro_use] extern crate pnet;
 #[macro_use] extern crate matches;
+extern crate rayon;
 extern crate nix;
 extern crate ansi_term;
+
+use rayon::prelude::*;
 
 use std::net::*;
 use std::time::Duration;
@@ -74,6 +76,8 @@ fn rascan(args: ArgMatches) -> Result<(), String> {
                 true
             }
         })
+        .collect::<Vec<_>>()
+        .into_iter()
         .for_each(|(port, status)|{
             print_status(port, status);
         });
